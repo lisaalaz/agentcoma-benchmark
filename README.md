@@ -1,12 +1,12 @@
 
 # <img src="assets/agent.png" alt="Agent icon" width="65"/> AgentCoMa    
 
-[**Paper**]() | [**Data**]() | [**Leaderboard**]() 
+[**Paper**]() | [**Data**](https://huggingface.co/datasets/LisaAlaz/AgentCoMa) | [**Leaderboard**](https://agentcoma.github.io/) 
 
 Welcome to the official repository for [AgentCoMa: A Compositional Benchmark Mixing Commonsense and
 Mathematical Reasoning in Real-World Scenarios]().
 
-See instructions below to submit to the [**Leaderboard**]()✨
+See instructions below to submit to the [**Leaderboard**](https://agentcoma.github.io/)✨
 
 AgentCoMa is an **Agent**ic **Co**mmonsense and **Ma**th benchmark where each compositional task requires both commonsense and mathematical reasoning to be solved. The tasks are set in real-world scenarios: *house working*, *web shopping*, *science experiments*, *smart assistant* and *travel agent*. The benchmark is designed to test the mixed-type compositional reasoning abilities of LLMs. Contemporary LLMs perform well on commonsense and math reasoning in isolation, but are far less effective at solving AgentCoMa tasks that require their composition. See some dev set example questions below.
 
@@ -18,7 +18,7 @@ For each compositional task, we also provide its underlying reasoning steps as i
 
 ### Step 1: Download the data
 
-Download the AgentCoMa dev and test sets from [Hugging Face]() (requires entering your name, email and affiliation), and place both .csv files in the `data/` folder.
+Download the AgentCoMa dev and test sets from [Hugging Face](https://huggingface.co/datasets/LisaAlaz/AgentCoMa) (requires HF login + sharing email and username), and place both .csv files in the `data/` folder.
 
 ### Step 2: Clone repository and install required packages
 ```bash
@@ -79,7 +79,19 @@ python3 eval.py test ~/outputs
 
 *Note: to self-report for leaderboard inclusion, your results should already be in a paper (ArXiv preprints are accepted).*
 
-Use [this Google form]() to self-report results. Please only provide test set results (not dev) for the Leaderboard. In the form, you will need to provide the following scores from the evaluation report:
+Use [this Google form](https://docs.google.com/forms/d/1Ymye0kIaKNPXoHuPSiTt6oIhgQ1phCtwMSEVeP2mA_k) to self-report results. Please only provide test set results (not dev) for the Leaderboard. In the form, you will need to provide the following scores from the evaluation report:
 - Percentage of questions where both reasoning steps are individually correct
 - Compositional accuracy
 - Compositionality gap
+
+## Citation
+
+If you use this dataset, please cite our work:
+
+````bibtex
+@misc{alazraki2025agentcoma,
+  title   = {Agent{C}o{M}a: A Compositional Benchmark Mixing Commonsense and Mathematical Reasoning in Real-World Scenarios},
+  author  = {Alazraki, Lisa and Chen, Lihu and Brassard, Ana and Stacey, Joe and Rahmani, Hossein A. and Rei, Marek},
+  year    = {2025}
+}
+````
