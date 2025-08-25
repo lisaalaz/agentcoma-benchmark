@@ -1,5 +1,5 @@
 
-# <img src="assets/agent.png" alt="Agent icon" width="65"/> AgentCoMa    
+# <img src="https://agentcoma.github.io/images/agent.png" alt="Agent icon" width="65"/> AgentCoMa    
 
 [**Paper**]() | [**Data**](https://huggingface.co/datasets/LisaAlaz/AgentCoMa) | [**Leaderboard**](https://agentcoma.github.io/) 
 
@@ -10,17 +10,14 @@ See instructions below to submit to the [**Leaderboard**](https://agentcoma.gith
 
 AgentCoMa is an **Agent**ic **Co**mmonsense and **Ma**th benchmark where each compositional task requires both commonsense and mathematical reasoning to be solved. The tasks are set in real-world scenarios: *house working*, *web shopping*, *science experiments*, *smart assistant* and *travel agent*. The benchmark is designed to test the mixed-type compositional reasoning abilities of LLMs. Contemporary LLMs perform well on commonsense and math reasoning in isolation, but are far less effective at solving AgentCoMa tasks that require their composition. See some dev set example questions below.
 
-<img src="assets/question_examples.svg" alt="Question examples" width="1000"/>
+<img src="https://agentcoma.github.io/images/question_examples.svg" alt="Question examples" width="1000"/>
 
 For each compositional task, we also provide its underlying reasoning steps as individual questions. Performance on AgentCoMa is measured as the *compositionality gap* — i.e., the difference between the accuracy on the compositional tasks and the proportion of samples where all individual reasoning steps are answered correctly in isolation.
 
 ## How to evaluate on AgentCoMa and be added to the Leaderboard
 
-### Step 1: Download the data
 
-Download the AgentCoMa dev and test sets from [Hugging Face](https://huggingface.co/datasets/LisaAlaz/AgentCoMa) (requires HF login + sharing email and username), and place both .csv files in the `data/` folder.
-
-### Step 2: Clone repository and install required packages
+### Step 1: Clone this repository and install required packages
 ```bash
 git clone https://github.com/lisaalaz/agentcoma-benchmark.git
 cd agentcoma-benchmark
@@ -28,6 +25,11 @@ python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install --no-cache-dir -r requirements.txt
 ```
+
+### Step 2: Download the data
+
+Download the data from [Hugging Face](https://huggingface.co/datasets/LisaAlaz/AgentCoMa) (requires HF login + sharing email and username), and place `agentcoma_dev.csv` and `agentcoma_test.csv` in the `data/` folder.
+
 
 ### Step 3: Run inference on AgentCoMa
 
@@ -45,7 +47,7 @@ For example, to run inference on the test set with Llama 3.1 70B Instruct, with 
 CUDA_VISIBLE_DEVICES=0,1,2,3 python3 inference.py meta-llama/Llama-3.1-70B-Instruct test 4 ~/outputs
 ```
 
-The script automatically saves three distinct output .csv files -- for commonsense-only suq-questions, math-only subquestions, and compositional questions.
+The script automatically saves three distinct output .csv files -- for commonsense-only subquestions, math-only subquestions, and compositional questions.
 These three files can be used to automatically evaluate the overall performance of the model in the next step.
 
 ### Step 4: Compute the evaluation report 

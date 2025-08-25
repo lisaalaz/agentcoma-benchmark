@@ -1,0 +1,1 @@
+Download `agentcoma_dev.csv` and `agentcoma_test.csv` from [Hugging Face](https://huggingface.co/datasets/LisaAlaz/AgentCoMa) (requires HF login + sharing email and username), and place both files in this folder.
