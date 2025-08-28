@@ -1,10 +1,10 @@
 
 # <img src="https://agentcoma.github.io/images/agent.png" alt="Agent icon" width="65"/> AgentCoMa    
 
-[**Paper**]() | [**Data**](https://huggingface.co/datasets/LisaAlaz/AgentCoMa) | [**Leaderboard**](https://agentcoma.github.io/) 
+[**Paper**](https://arxiv.org/abs/2508.19988) | [**Data**](https://huggingface.co/datasets/LisaAlaz/AgentCoMa) | [**Leaderboard**](https://agentcoma.github.io/) 
 
 Welcome to the official repository for [AgentCoMa: A Compositional Benchmark Mixing Commonsense and
-Mathematical Reasoning in Real-World Scenarios]().
+Mathematical Reasoning in Real-World Scenarios](https://arxiv.org/abs/2508.19988).
 
 See instructions below to submit to the [**Leaderboard**](https://agentcoma.github.io/)✨
 
@@ -91,9 +91,13 @@ Use [this Google form](https://docs.google.com/forms/d/1Ymye0kIaKNPXoHuPSiTt6oIh
 If you use this dataset, please cite our work:
 
 ````bibtex
-@misc{alazraki2025agentcoma,
-  title   = {Agent{C}o{M}a: A Compositional Benchmark Mixing Commonsense and Mathematical Reasoning in Real-World Scenarios},
-  author  = {Alazraki, Lisa and Chen, Lihu and Brassard, Ana and Stacey, Joe and Rahmani, Hossein A. and Rei, Marek},
-  year    = {2025}
+@misc{alazraki2025agentcomacompositionalbenchmarkmixing,
+      title={AgentCoMa: A Compositional Benchmark Mixing Commonsense and Mathematical Reasoning in Real-World Scenarios}, 
+      author={Lisa Alazraki and Lihu Chen and Ana Brassard and Joe Stacey and Hossein A. Rahmani and Marek Rei},
+      year={2025},
+      eprint={2508.19988},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2508.19988}, 
 }
 ````
