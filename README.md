@@ -21,7 +21,7 @@ For each compositional task, we also provide its underlying reasoning steps as i
 ```bash
 git clone https://github.com/lisaalaz/agentcoma-benchmark.git
 cd agentcoma-benchmark
-python3 -m venv .venv
+python3.10 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install --no-cache-dir -r requirements.txt
 ```
