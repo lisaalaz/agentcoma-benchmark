@@ -36,15 +36,6 @@ def custom_round(x, decimal_places=2):
     else:
         return round(x, decimal_places)
 
-def normalize(res, round_to=2):
-    """Rounds and removes trailing zeros."""
-    res = custom_round(res, round_to)
-    res = str(res)
-    if "." in res:
-        while res[-1] == "0":
-            res = res[:-1]
-        res = res.strip(".")
-    return res
 
 def parse_answer(answer, pattern:str="so the final answer is:"):
     """Extracts number from answer."""
