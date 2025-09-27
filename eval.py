@@ -25,17 +25,6 @@ def call_api(client, model_id, input_text):
     )
     return response.output_text
 
-def custom_round(x, decimal_places=2):
-    """Rounds decimals to 2 d.p."""
-    str_x = f"{x:.10f}"
-    before_decimal = str_x.split('.')[0]
-    after_decimal = str_x.split('.')[1]
-    leading_zeros = len(after_decimal) - len(after_decimal.lstrip('0'))
-    if leading_zeros >= 1 and before_decimal == "0":
-        return round(x, leading_zeros + 2)
-    else:
-        return round(x, decimal_places)
-
 
 def parse_answer(answer, pattern:str="so the final answer is:"):
     """Extracts number from answer."""
