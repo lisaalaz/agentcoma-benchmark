@@ -11,11 +11,6 @@ from tqdm import tqdm
 
 openai_api_key = os.environ["OPENAI_API_KEY"]
 
-def load_api_client():
-    """Loads the OpenAI API client with the given API key."""
-    api_key = openai_api_key
-    openai_client = OpenAI(api_key=api_key)
-    return openai_client
 
 def call_api(client, model_id, input_text):
     """Calls the OpenAI API with the given model and input text."""
@@ -78,7 +73,7 @@ def evaluate_answer(question, gold_answer, response, client, eval_model_id="gpt-
 def check_text(question, true, pred):
   """LLM-as-a-judge eval."""
   assert len(question) == len(true) == len(pred)
-  client = load_api_client()
+  client = OpenAI(api_key=openai_api_key)
   res = []
   for i in tqdm(range(len(pred))):
     is_correct = 0
