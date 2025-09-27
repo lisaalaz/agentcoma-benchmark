@@ -12,13 +12,6 @@ from tqdm import tqdm
 openai_api_key = os.environ["OPENAI_API_KEY"]
 
 
-def call_api(client, model_id, input_text):
-    """Calls the OpenAI API with the given model and input text."""
-    response = client.responses.create(
-        model=model_id,
-        input=input_text
-    )
-    return response.output_text
 
 
 def parse_answer(answer, pattern:str="so the final answer is:"):
@@ -63,7 +56,11 @@ def evaluate_answer(question, gold_answer, response, client, eval_model_id="gpt-
     Question: {question}
     Response: {response}
     Reference: {gold_answer}''')
-    eval_response = call_api(client, eval_model_id, eval_prompt)
+    response = client.responses.create(
+        model=eval_model_id,
+        input=eval_prompt
+    )
+    eval_response = response.output_text
     if "yes" in eval_response.lower():
         result = True
     elif "no" in eval_response.lower():
