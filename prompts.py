@@ -1,6 +1,5 @@
 templates = {
-
-"few_shot_cot_composition": """Answer the questions below step by step. Always conclude with the sentence 'So the final answer is:' followed by the final numerical answer.
+    "few_shot_cot_composition": """Answer the questions below step by step. Always conclude with the sentence 'So the final answer is:' followed by the final numerical answer.
 
 
 Question: You have a buffet plate that is 1.3 cm thick, a saucer that is 0.7 cm thick, a dinner plate that is 1.65 cm thick, and a dessert plate that is 0.93 cm thick.
@@ -23,11 +22,7 @@ So the final answer is: 17500
 Question: {question}
 
 Answer: """,
-
-
-
-
-"few_shot_cot_commonsense": """Answer the questions below step by step. Always conclude with the sentence 'So the final answer is:' followed by the final answer.
+    "few_shot_cot_commonsense": """Answer the questions below step by step. Always conclude with the sentence 'So the final answer is:' followed by the final answer.
 
 
 Question: You have a buffet plate, a saucer, a dinner plate, and a dessert plate.
@@ -48,11 +43,7 @@ So the final answer is: Kuala Lumpur and Dubai
 Question: {question}
 
 Answer: """,
-
-
-
-
-"few_shot_cot_math": """Answer the questions below step by step. Always conclude with the sentence 'So the final answer is:' followed by the final numerical answer.
+    "few_shot_cot_math": """Answer the questions below step by step. Always conclude with the sentence 'So the final answer is:' followed by the final numerical answer.
 
 
 Question: You have a buffet plate that is 1.3 cm thick, a saucer that is 0.7 cm thick, a dinner plate that is 1.65 cm thick, and a dessert plate that is 0.93 cm thick.
@@ -71,6 +62,5 @@ So the final answer is: 17500
 
 Question: {question}
 
-Answer: """
-
+Answer: """,
 }
