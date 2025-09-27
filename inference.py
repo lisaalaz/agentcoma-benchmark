@@ -30,9 +30,8 @@ def run_inference(model: str, split: str, tp_size: int, output_folder: str,
     data = pd.read_csv(f"data/agentcoma_{split}.csv")
     print("Data loaded!")
 
-    out = []
-
     for question_type in question_types:
+        out = []
         prompts = [templates[f"few_shot_cot_{question_type}"].format(
              question=q) for q in data[f'question_{question_type}']]
 
@@ -49,7 +48,7 @@ def run_inference(model: str, split: str, tp_size: int, output_folder: str,
         for n, output in tqdm(enumerate(outputs)):
                 generated_text = output.outputs[0].text
                 generated_text_clean = generated_text.split("Question:")[0]
-                out.append({"idx": {n}, "generation": generated_text_clean})
+                out.append({"idx": n, "generation": generated_text_clean})
         out_df = pd.DataFrame(out)
         out_df.to_csv(
           os.path.join(
