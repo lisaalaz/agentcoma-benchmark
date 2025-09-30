@@ -1,5 +1,6 @@
 import ast
 import asyncio
+import glob
 import numpy as np
 import os
 import pandas as pd
@@ -152,7 +153,75 @@ def check_text_wrapper(question, true, pred, max_concurrent=10, max_calls_per_mi
     return asyncio.run(check_text(question, true, pred, max_concurrent, max_calls_per_minute))
 
 
-def evaluate_all_question_types_and_print_report(data_paths, data_split, output_folder=None):
+def discover_inference_files(output_folder, model_name, split, sampling_config=None):
+    """Auto-discover inference result files based on naming pattern.
+
+    Args:
+        output_folder: Path to folder containing inference results
+        model_name: Model name (e.g., 'Llama-3.2-1B-Instruct')
+        split: Data split ('dev' or 'test')
+        sampling_config: Specific sampling config, or None for all configs
+
+    Returns:
+        Dictionary mapping question types to file paths, or list of dicts if multiple configs
+    """
+    model_short = model_name.split("/")[-1] if "/" in model_name else model_name
+
+    if sampling_config:
+        # Single config
+        pattern = f"{split}_{model_short}_*_{sampling_config}.csv"
+        files = glob.glob(os.path.join(output_folder, pattern))
+
+        data_paths = {}
+        for file in files:
+            filename = os.path.basename(file)
+            if "_commonsense_" in filename:
+                data_paths["commonsense_inference_data_path"] = file
+            elif "_math_" in filename:
+                data_paths["math_inference_data_path"] = file
+            elif "_composition_" in filename:
+                data_paths["composition_inference_data_path"] = file
+        return data_paths
+    else:
+        # All configs
+        pattern = f"{split}_{model_short}_*.csv"
+        files = glob.glob(os.path.join(output_folder, pattern))
+
+        configs = set()
+        for file in files:
+            parts = os.path.basename(file).replace(".csv", "").split("_")
+            if len(parts) >= 4:
+                configs.add(parts[-1])  # sampling config is last part
+
+        return [discover_inference_files(output_folder, model_name, split, config) for config in sorted(configs)]
+
+
+def discover_all_models(output_folder, split):
+    """Auto-discover all models in the output folder based on file patterns.
+
+    Args:
+        output_folder: Path to folder containing inference results
+        split: Data split ('dev' or 'test')
+
+    Returns:
+        List of model names found in the output folder
+    """
+    pattern = f"{split}_*.csv"
+    files = glob.glob(os.path.join(output_folder, pattern))
+
+    models = set()
+    for file in files:
+        filename = os.path.basename(file)
+        parts = filename.replace(".csv", "").split("_")
+        if len(parts) >= 4:
+            # Extract model name (between split and question_type)
+            model_name = parts[1]
+            models.add(model_name)
+
+    return sorted(list(models))
+
+
+def evaluate_all_question_types_and_print_report(data_paths, data_split, output_folder=None, model_config_name=None):
     """Evaluates all commonsense-only, math-only and compositional answers of a
       model, saves 0-1 scores for each answer for each csv file (overwrites the
       file), and computes the compositionality gap between the proportion of
@@ -230,12 +299,73 @@ You have set to evaluate on the {data_split} split. Are you sure you are providi
             text_file.write(accuracy_report)
         print("Done.")
 
+    # Return metrics for CSV compilation
+    return {
+        "commonsense_acc": commonsense_acc,
+        "math_acc": math_acc,
+        "both_steps_acc": both_steps_acc,
+        "comp_acc": comp_acc,
+        "comp_gap": comp_gap,
+    }
+
 
 if __name__ == "__main__":
-    data_paths = {
-        # paste the paths to the inference csv files here.
-        "commonsense_inference_data_path": "",
-        "math_inference_data_path": "",
-        "composition_inference_data_path": "",
-    }
-    evaluate_all_question_types_and_print_report(data_paths, *sys.argv[1:])
+    if len(sys.argv) < 3:
+        print("Usage: python eval.py <output_folder> <split>")
+        print("Example: python eval.py outputs/ test")
+        sys.exit(1)
+
+    output_folder, split = sys.argv[1:3]
+
+    # Discover all models in the output folder
+    models = discover_all_models(output_folder, split)
+    if not models:
+        print(f"No models found in {output_folder} for {split} split")
+        sys.exit(1)
+
+    print(f"Found models: {', '.join(models)}")
+
+    all_results = []
+    for model_name in models:
+        print(f"\n{'=' * 70}")
+        print(f"Evaluating model: {model_name}")
+        print(f"{'=' * 70}")
+
+        all_configs = discover_inference_files(output_folder, model_name, split)
+        if not all_configs:
+            print(f"No files found for {model_name} {split}")
+            continue
+
+        for data_paths in all_configs:
+            # Extract full sampling config name from filename
+            sample_file = list(data_paths.values())[0]
+            filename = os.path.basename(sample_file).replace(".csv", "")
+            parts = filename.split("_")
+            # Sampling config starts after question type (commonsense/math/composition)
+            if len(parts) >= 4:
+                config_name = "_".join(parts[3:])  # Everything after question type
+            else:
+                config_name = parts[-1]
+
+            print(f"\n{'-' * 50}")
+            print(f"Evaluating configuration: {config_name}")
+            print(f"{'-' * 50}")
+
+            # Determine sampling method
+            if "top_p" in config_name:
+                sampling_method = "top_p"
+            elif "min_p" in config_name:
+                sampling_method = "min_p"
+            elif "greedy" in config_name:
+                sampling_method = "greedy"
+            else:
+                sampling_method = "unknown"
+
+            metrics = evaluate_all_question_types_and_print_report(data_paths, split, output_folder)
+            all_results.append({"model_config": f"{model_name}_{config_name}", "sampling_method": sampling_method, **metrics})
+
+    # Save combined results
+    results_df = pd.DataFrame(all_results)
+    results_csv_path = os.path.join(output_folder, f"evaluation_results_{split}.csv")
+    results_df.to_csv(results_csv_path, index=False)
+    print(f"\nCombined results saved to: {results_csv_path}")
