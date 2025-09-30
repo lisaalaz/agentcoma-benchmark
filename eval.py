@@ -196,6 +196,31 @@ def discover_inference_files(output_folder, model_name, split, sampling_config=N
         return [discover_inference_files(output_folder, model_name, split, config) for config in sorted(configs)]
 
 
+def discover_all_models(output_folder, split):
+    """Auto-discover all models in the output folder based on file patterns.
+    
+    Args:
+        output_folder: Path to folder containing inference results
+        split: Data split ('dev' or 'test')
+    
+    Returns:
+        List of model names found in the output folder
+    """
+    pattern = f"{split}_*.csv"
+    files = glob.glob(os.path.join(output_folder, pattern))
+    
+    models = set()
+    for file in files:
+        filename = os.path.basename(file)
+        parts = filename.replace('.csv', '').split('_')
+        if len(parts) >= 4:
+            # Extract model name (between split and question_type)
+            model_name = parts[1]
+            models.add(model_name)
+    
+    return sorted(list(models))
+
+
 def evaluate_all_question_types_and_print_report(data_paths, data_split, output_folder=None, model_config_name=None):
     """Evaluates all commonsense-only, math-only and compositional answers of a
       model, saves 0-1 scores for each answer for each csv file (overwrites the
@@ -285,44 +310,66 @@ You have set to evaluate on the {data_split} split. Are you sure you are providi
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
-        print("Usage: python eval.py <output_folder> <model_name> <split> [sampling_config]")
-        print("Example: python eval.py outputs/ meta-llama/Llama-3.2-1B-Instruct test")
-        print("Example: python eval.py outputs/ meta-llama/Llama-3.2-1B-Instruct test top_p_90")
+    if len(sys.argv) < 3:
+        print("Usage: python eval.py <output_folder> <split>")
+        print("Example: python eval.py outputs/ test")
         sys.exit(1)
 
-    output_folder, model_name, split = sys.argv[1:4]
-    sampling_config = sys.argv[4] if len(sys.argv) > 4 else None
-
-    model_short = model_name.split("/")[-1] if "/" in model_name else model_name
-    results = []
-
-    if sampling_config:
-        # Evaluate single config
-        data_paths = discover_inference_files(output_folder, model_name, split, sampling_config)
-        if not data_paths:
-            print(f"No files found for {model_name} {split} {sampling_config}")
-            sys.exit(1)
-        print(f"Evaluating {sampling_config} configuration...")
-        metrics = evaluate_all_question_types_and_print_report(data_paths, split, output_folder)
-        results.append({"model_config": f"{model_short}_{sampling_config}", **metrics})
-    else:
-        # Evaluate all configs
+    output_folder, split = sys.argv[1:3]
+    
+    # Discover all models in the output folder
+    models = discover_all_models(output_folder, split)
+    if not models:
+        print(f"No models found in {output_folder} for {split} split")
+        sys.exit(1)
+    
+    print(f"Found models: {', '.join(models)}")
+    
+    all_results = []
+    for model_name in models:
+        print(f"\n{'='*70}")
+        print(f"Evaluating model: {model_name}")
+        print(f"{'='*70}")
+        
         all_configs = discover_inference_files(output_folder, model_name, split)
         if not all_configs:
             print(f"No files found for {model_name} {split}")
-            sys.exit(1)
-
-        for i, data_paths in enumerate(all_configs):
-            config_name = list(data_paths.values())[0].split("_")[-1].replace(".csv", "")
-            print(f"\n{'=' * 50}")
+            continue
+        
+        for data_paths in all_configs:
+            # Extract full sampling config name from filename
+            sample_file = list(data_paths.values())[0]
+            filename = os.path.basename(sample_file).replace(".csv", "")
+            parts = filename.split("_")
+            # Sampling config starts after question type (commonsense/math/composition)
+            if len(parts) >= 4:
+                config_name = "_".join(parts[3:])  # Everything after question type
+            else:
+                config_name = parts[-1]
+            
+            print(f"\n{'-'*50}")
             print(f"Evaluating configuration: {config_name}")
-            print(f"{'=' * 50}")
+            print(f"{'-'*50}")
+            
+            # Determine sampling method
+            if "top_p" in config_name:
+                sampling_method = "top_p"
+            elif "min_p" in config_name:
+                sampling_method = "min_p"
+            elif "greedy" in config_name:
+                sampling_method = "greedy"
+            else:
+                sampling_method = "unknown"
+            
             metrics = evaluate_all_question_types_and_print_report(data_paths, split, output_folder)
-            results.append({"model_config": f"{model_short}_{config_name}", **metrics})
-
-    # Save results to CSV
-    results_df = pd.DataFrame(results)
-    results_csv_path = os.path.join(output_folder, f"evaluation_results_{model_short}_{split}.csv")
+            all_results.append({
+                "model_config": f"{model_name}_{config_name}", 
+                "sampling_method": sampling_method,
+                **metrics
+            })
+    
+    # Save combined results
+    results_df = pd.DataFrame(all_results)
+    results_csv_path = os.path.join(output_folder, f"evaluation_results_{split}.csv")
     results_df.to_csv(results_csv_path, index=False)
-    print(f"\nResults saved to: {results_csv_path}")
+    print(f"\nCombined results saved to: {results_csv_path}")
