@@ -1,15 +1,39 @@
 import ast
+import asyncio
 import numpy as np
 import os
 import pandas as pd
 import re
 import sys
+import time
 import uuid
 
 from openai import OpenAI
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from tqdm import tqdm
 
 openai_api_key = os.environ["OPENAI_API_KEY"]
+
+
+class RateLimiter:
+    """Simple rate limiter to control API call frequency."""
+
+    def __init__(self, max_calls_per_minute=60):
+        self.max_calls_per_minute = max_calls_per_minute
+        self.calls = []
+
+    async def acquire(self):
+        now = time.time()
+        # Remove calls older than 1 minute
+        self.calls = [call_time for call_time in self.calls if now - call_time < 60]
+
+        if len(self.calls) >= self.max_calls_per_minute:
+            # Wait until we can make the next call
+            wait_time = 60 - (now - self.calls[0]) + 0.1  # Small buffer
+            await asyncio.sleep(wait_time)
+            return await self.acquire()
+
+        self.calls.append(now)
 
 
 def parse_answer(answer, pattern: str = "so the final answer is:"):
@@ -50,14 +74,21 @@ def accuracy(true, pred):
     return is_accurate
 
 
-def evaluate_answer(question, gold_answer, response, client, eval_model_id="gpt-4o-2024-08-06"):
-    """Evaluates a text response against the gold answer."""
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10), retry=retry_if_exception_type((Exception,)))
+async def evaluate_answer(question, gold_answer, response, client, rate_limiter, eval_model_id="gpt-4o-2024-08-06"):
+    """Async version of evaluate_answer with rate limiting and retry logic."""
+    await rate_limiter.acquire()
+
     eval_prompt = f"""Evaluate the following response to the question, and determine if the answer is correct given the reference. Respond only with "yes" if the answer is equivalent, or "no" if it is not.
     Question: {question}
     Response: {response}
     Reference: {gold_answer}"""
-    response = client.responses.create(model=eval_model_id, input=eval_prompt)
-    eval_response = response.output_text
+
+    # Convert to async call using thread pool
+    loop = asyncio.get_event_loop()
+    response_obj = await loop.run_in_executor(None, lambda: client.responses.create(model=eval_model_id, input=eval_prompt))
+    eval_response = response_obj.output_text
+
     if "yes" in eval_response.lower():
         result = True
     elif "no" in eval_response.lower():
@@ -65,31 +96,60 @@ def evaluate_answer(question, gold_answer, response, client, eval_model_id="gpt-
     return result
 
 
-def check_text(question, true, pred):
-    """LLM-as-a-judge eval."""
-    assert len(question) == len(true) == len(pred)
-    client = OpenAI(api_key=openai_api_key)
-    res = []
-    for i in tqdm(range(len(pred))):
-        is_correct = 0
-        try:
-            text = pred[i].split("So the final answer is:")[1].strip()
+async def process_single_evaluation(i, question, true, pred, client, rate_limiter):
+    """Process a single evaluation with all its gold answers."""
+    is_correct = 0
+    try:
+        text = pred[i].split("So the final answer is:")[1].strip()
+        for ga in ast.literal_eval(true[i]):
+            if await evaluate_answer(question[i], ga, text, client, rate_limiter):
+                is_correct = 1
+                break
+        if not is_correct:
             for ga in ast.literal_eval(true[i]):
-                if evaluate_answer(question[i], ga, text, client):
+                if await evaluate_answer(question[i], ga, pred[i], client, rate_limiter):
                     is_correct = 1
                     break
-            if not is_correct:
-                for ga in ast.literal_eval(true[i]):
-                    if evaluate_answer(question[i], ga, pred[i], client):
-                        is_correct = 1
-                        break
-        except:
-            for ga in ast.literal_eval(true[i]):
-                if evaluate_answer(question[i], ga, pred[i], client):
-                    is_correct = 0
-                    break
-        res.append(is_correct)
-    return res
+    except:
+        for ga in ast.literal_eval(true[i]):
+            if await evaluate_answer(question[i], ga, pred[i], client, rate_limiter):
+                is_correct = 1
+                break
+    return i, is_correct
+
+
+async def check_text(question, true, pred, max_concurrent=10, max_calls_per_minute=180):
+    """Parallelized LLM-as-a-judge eval with rate limiting."""
+    assert len(question) == len(true) == len(pred)
+    client = OpenAI(api_key=openai_api_key)
+    rate_limiter = RateLimiter(max_calls_per_minute)
+
+    # Create semaphore to limit concurrent requests
+    semaphore = asyncio.Semaphore(max_concurrent)
+
+    async def process_with_semaphore(i):
+        async with semaphore:
+            return await process_single_evaluation(i, question, true, pred, client, rate_limiter)
+
+    # Create tasks for all evaluations
+    tasks = [process_with_semaphore(i) for i in range(len(pred))]
+
+    # Process tasks with progress bar
+    results = []
+    with tqdm(total=len(tasks), desc="Evaluating") as pbar:
+        for coro in asyncio.as_completed(tasks):
+            result = await coro
+            results.append(result)
+            pbar.update(1)
+
+    # Sort results by index to maintain order
+    results.sort(key=lambda x: x[0])
+    return [result[1] for result in results]
+
+
+def check_text_wrapper(question, true, pred, max_concurrent=10, max_calls_per_minute=200):
+    """Wrapper to run async check_text from sync code."""
+    return asyncio.run(check_text(question, true, pred, max_concurrent, max_calls_per_minute))
 
 
 def evaluate_all_question_types_and_print_report(data_paths, data_split, output_folder=None):
@@ -122,7 +182,11 @@ def evaluate_all_question_types_and_print_report(data_paths, data_split, output_
 You have set to evaluate on the {data_split} split. Are you sure you are providing an output file for the correct split?"""
         if "commonsense" in path:
             print("Evaluating commonsense-only answers...")
-            acc = check_text(ground_truths["question_commonsense"], ground_truths["answers_commonsense"], answers["generation"])
+            acc = check_text_wrapper(
+                ground_truths["question_commonsense"],
+                ground_truths["answers_commonsense"],
+                answers["generation"],
+            )
             accs["commonsense"] = acc
         if "math" in path:
             print("Evaluating math-only answers...")

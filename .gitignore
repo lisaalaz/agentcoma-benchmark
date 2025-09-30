@@ -38,3 +38,38 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Model files and caches
+models--*/
+*.safetensors
+*.bin
+.locks/
+
+# Output directories
+outputs/
+results/
+
+# HuggingFace cache
+.cache/
+transformers_cache/
+
+# Dataset files (if large)
+*.csv
+!data/agentcoma_*.csv  # Keep original dataset files
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
