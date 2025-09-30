@@ -198,26 +198,26 @@ def discover_inference_files(output_folder, model_name, split, sampling_config=N
 
 def discover_all_models(output_folder, split):
     """Auto-discover all models in the output folder based on file patterns.
-    
+
     Args:
         output_folder: Path to folder containing inference results
         split: Data split ('dev' or 'test')
-    
+
     Returns:
         List of model names found in the output folder
     """
     pattern = f"{split}_*.csv"
     files = glob.glob(os.path.join(output_folder, pattern))
-    
+
     models = set()
     for file in files:
         filename = os.path.basename(file)
-        parts = filename.replace('.csv', '').split('_')
+        parts = filename.replace(".csv", "").split("_")
         if len(parts) >= 4:
             # Extract model name (between split and question_type)
             model_name = parts[1]
             models.add(model_name)
-    
+
     return sorted(list(models))
 
 
@@ -316,26 +316,26 @@ if __name__ == "__main__":
         sys.exit(1)
 
     output_folder, split = sys.argv[1:3]
-    
+
     # Discover all models in the output folder
     models = discover_all_models(output_folder, split)
     if not models:
         print(f"No models found in {output_folder} for {split} split")
         sys.exit(1)
-    
+
     print(f"Found models: {', '.join(models)}")
-    
+
     all_results = []
     for model_name in models:
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print(f"Evaluating model: {model_name}")
-        print(f"{'='*70}")
-        
+        print(f"{'=' * 70}")
+
         all_configs = discover_inference_files(output_folder, model_name, split)
         if not all_configs:
             print(f"No files found for {model_name} {split}")
             continue
-        
+
         for data_paths in all_configs:
             # Extract full sampling config name from filename
             sample_file = list(data_paths.values())[0]
@@ -346,11 +346,11 @@ if __name__ == "__main__":
                 config_name = "_".join(parts[3:])  # Everything after question type
             else:
                 config_name = parts[-1]
-            
-            print(f"\n{'-'*50}")
+
+            print(f"\n{'-' * 50}")
             print(f"Evaluating configuration: {config_name}")
-            print(f"{'-'*50}")
-            
+            print(f"{'-' * 50}")
+
             # Determine sampling method
             if "top_p" in config_name:
                 sampling_method = "top_p"
@@ -360,14 +360,10 @@ if __name__ == "__main__":
                 sampling_method = "greedy"
             else:
                 sampling_method = "unknown"
-            
+
             metrics = evaluate_all_question_types_and_print_report(data_paths, split, output_folder)
-            all_results.append({
-                "model_config": f"{model_name}_{config_name}", 
-                "sampling_method": sampling_method,
-                **metrics
-            })
-    
+            all_results.append({"model_config": f"{model_name}_{config_name}", "sampling_method": sampling_method, **metrics})
+
     # Save combined results
     results_df = pd.DataFrame(all_results)
     results_csv_path = os.path.join(output_folder, f"evaluation_results_{split}.csv")
